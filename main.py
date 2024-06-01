@@ -577,4 +577,5 @@ if __name__ == "__main__":
     DebugPrint("Script Start")
     DebugPrint(f"RUNNING AT {CURRENT_DIRECTORY} , RESOURCE_DIR : {RESOURCE_DIRECTORY}")
     DebugPrint(f"ARCH : {ARCH} , NETMUXD_AVAILABLE : {NETMUXD_IS_AVAILABLE}")
+    print(HELP_MSG)
     main()
