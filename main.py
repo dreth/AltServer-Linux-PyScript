@@ -6,11 +6,12 @@ import datetime
 import platform
 import requests
 import subprocess
+import logging
 
 
 # Developer settings
-GITHUB_API_TOKEN = ""
-headers = {'Authorization': 'token ' + GITHUB_API_TOKEN}
+GITHUB_API_TOKEN = os.getenv("GITHUB_PAT", "")
+headers = {'Authorization': 'Bearer ' + GITHUB_API_TOKEN}
 CUSTOM_HEADERS_ENABLED = False
 DEBUGGING = False
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -61,7 +62,7 @@ ANISETTE_SERVER_PATH = os.path.join(RESOURCE_DIRECTORY, "anisette-server")
 Anisette_Server_URL = ""
 
 SCRIPT_PATH = os.path.join(CURRENT_DIRECTORY, "main.py")
-SCRIPT_URL = "https://raw.githubusercontent.com/powenn/AltServer-Linux-PyScript/rewrite/main.py"
+SCRIPT_URL = "https://raw.githubusercontent.com/dreth/AltServer-Linux-PyScript/rewrite/main.py"
 
 # UPDATABLE BOOLS
 """
@@ -81,18 +82,18 @@ def getAnswer(text):
     try:
         return input(text)
     except KeyboardInterrupt:
-        print("\nCtrl+C pressed, aborting")
+        logging.info("\nCtrl+C pressed, aborting")
         exit(-2)
 
 
 def DebugPrint(msg):
     now = datetime.datetime.now().strftime(TIME_FORMAT)
     if DEBUGGING:
-        print(f"[DEBUG] {now}\n== {msg} ==")
+        logging.info(f"[DEBUG] {now}\n== {msg} ==")
 
 
 def FetchVersion() -> dict:
-    print("Fetching version ...")
+    logging.info("Fetching version ...")
 
     global Latest_AltServer_Version, Latest_AltStore_Version, Latest_Anisette_Server_Version, Latest_Netmuxd_Version, Latest_Script_Version
 
@@ -107,7 +108,7 @@ def FetchVersion() -> dict:
     Latest_Anisette_Server_Version = requests.get(
         "https://api.github.com/repos/Dadoum/Provision/releases/latest", headers=headers if CUSTOM_HEADERS_ENABLED else "").json()["tag_name"]
     Latest_Script_Version = requests.get(
-        "https://api.github.com/repos/powenn/AltServer-Linux-PyScript/releases/latest", headers=headers if CUSTOM_HEADERS_ENABLED else "").json()["tag_name"]
+        "https://api.github.com/repos/dreth/AltServer-Linux-PyScript/releases/latest", headers=headers if CUSTOM_HEADERS_ENABLED else "").json()["tag_name"]
 
     global Altserver_URL, AltStore_URL, Netmuxd_URL, Anisette_Server_URL, Version_Fetched
 
@@ -118,7 +119,7 @@ def FetchVersion() -> dict:
 
     Version_Fetched = True
 
-    print("Done")
+    logging.info("Done")
     json_data = {"AltServer": Latest_AltServer_Version, "AltStore": Latest_AltStore_Version, "Netmuxd": Latest_Netmuxd_Version,
                  "Anisette-Server": Latest_Anisette_Server_Version, "Script": Latest_Script_Version}
     DebugPrint(json_data)
@@ -135,7 +136,7 @@ def CheckResource():
     DebugPrint(f"RESOURCE_MISSED : {Resource_Missed}")
 
     if not os.path.exists(VERSION_JSON_PATH):
-        print("version.json not exists")
+        logging.info("version.json not exists")
         latest_version_json: dict = FetchVersion()
         DebugPrint(latest_version_json)
         with open(VERSION_JSON_PATH, "w") as outfile:
@@ -151,32 +152,32 @@ def CheckResource():
     current_version_json = json.load(open(VERSION_JSON_PATH))
     # Resource dir
     if not os.path.exists(RESOURCE_DIRECTORY):
-        print("Creating 'resource' directory")
+        logging.info("Creating 'resource' directory")
         os.mkdir(RESOURCE_DIRECTORY)
     # AltServer
     if not os.path.exists(ALTSERVER_PATH):
-        print(f"Downloading Altserver {Latest_AltServer_Version}")
+        logging.info(f"Downloading Altserver {Latest_AltServer_Version}")
         DebugPrint(Altserver_URL)
         response = requests.get(Altserver_URL)
         open(ALTSERVER_PATH, "wb").write(response.content)
         current_version_json["AltServer"] = Latest_AltServer_Version
     # AltStore
     if not os.path.exists(ALTSTORE_PATH):
-        print(f"Downloading AltStore ipa {Latest_AltStore_Version}")
+        logging.info(f"Downloading AltStore ipa {Latest_AltStore_Version}")
         DebugPrint(AltStore_URL)
         response = requests.get(AltStore_URL)
         open(ALTSTORE_PATH, "wb").write(response.content)
         current_version_json["AltStore"] = Latest_AltStore_Version
     # Netmuxd
     if not os.path.exists(NETMUXD_PATH) and NETMUXD_IS_AVAILABLE:
-        print(f"Downloading netmuxd {Latest_Netmuxd_Version}")
+        logging.info(f"Downloading netmuxd {Latest_Netmuxd_Version}")
         DebugPrint(Netmuxd_URL)
         response = requests.get(Netmuxd_URL)
         open(NETMUXD_PATH, "wb").write(response.content)
         current_version_json["Netmuxd"] = Latest_Netmuxd_Version
     # Anisette-Server
     if not os.path.exists(ANISETTE_SERVER_PATH):
-        print(f"Downloading anisette-server {Latest_Anisette_Server_Version}")
+        logging.info(f"Downloading anisette-server {Latest_Anisette_Server_Version}")
         DebugPrint(Anisette_Server_URL)
         response = requests.get(Anisette_Server_URL)
         open(ANISETTE_SERVER_PATH, "wb").write(response.content)
@@ -187,13 +188,13 @@ def CheckResource():
         json.dump(current_version_json, outfile)
 
     if not os.access(ALTSERVER_PATH, os.X_OK):
-        print("Setting AltServer exec permission")
+        logging.info("Setting AltServer exec permission")
         os.chmod(ALTSERVER_PATH, 0o755)
     if os.path.exists(NETMUXD_PATH) and not os.access(NETMUXD_PATH, os.X_OK):
-        print("Setting netmuxd exec permission")
+        logging.info("Setting netmuxd exec permission")
         os.chmod(NETMUXD_PATH, 0o755)
     if not os.access(ANISETTE_SERVER_PATH, os.X_OK):
-        print("Setting anisette-server permission")
+        logging.info("Setting anisette-server permission")
         os.chmod(ANISETTE_SERVER_PATH, 0o755)
 
     DebugPrint(subprocess.getoutput(f"ls -al {RESOURCE_DIRECTORY}"))
@@ -223,27 +224,27 @@ def CheckUpdate() -> bool:
     # script
     if Latest_Script_Version != Current_Script_Version:
         Script_Is_Updatable = True
-        print(
+        logging.info(
             f"Script is updatable , current ver : {Current_Script_Version} , latest ver : {Latest_Script_Version}")
     # altserver
     if Latest_AltServer_Version != Current_AltServer_Version:
         AltServer_Is_Updatable = True
-        print(
+        logging.info(
             f"AltServer is updatable , current ver : {Current_AltServer_Version} , latest ver : {Latest_AltServer_Version}")
     # altstore
     if Latest_AltStore_Version != Current_AltStore_Version:
         AltStore_Is_Updatable = True
-        print(
+        logging.info(
             f"AltStrore is updatable , current ver : {Current_AltStore_Version} , latest ver : {Latest_AltStore_Version}")
     # netmuxd
     if Latest_Netmuxd_Version != Current_Netmuxd_Version:
         Nermuxd_Is_Updatable = True
-        print(
+        logging.info(
             f"Netmuxd is updatable , current ver : {Current_Netmuxd_Version} , latest ver : {Latest_Netmuxd_Version}")
     # anisette server
     if Latest_Anisette_Server_Version != Current_Anisette_Server_Version:
         Anisette_Server_Is_Updatable = True
-        print(
+        logging.info(
             f"Anisette-Server is updatable , current ver : {Current_Anisette_Server_Version} , latest ver : {Latest_Anisette_Server_Version}")
 
     return AltServer_Is_Updatable or AltStore_Is_Updatable or Nermuxd_Is_Updatable or Anisette_Server_Is_Updatable or Script_Is_Updatable
@@ -265,22 +266,22 @@ def Update():
         answer = getAnswer("Update available, Update now ? (y/n) : ").lower()
         if answer == 'y':
             # Remove outdated resource
-            print("Removing outdated resource ...")
+            logging.info("Removing outdated resource ...")
             RemoveOutdatedResource()
             # Update script
             if Script_Is_Updatable:
-                print(
+                logging.info(
                     f"Downloading the lastest script [{Latest_Script_Version}] ...")
                 response = requests.get(
-                    "https://raw.githubusercontent.com/powenn/AltServer-Linux-PyScript/rewrite/main.py")
+                    "https://raw.githubusercontent.com/dreth/AltServer-Linux-PyScript/rewrite/main.py")
                 open(SCRIPT_PATH, "wb").write(response.content)
                 current_version_json["Script"] = Latest_Script_Version
                 with open(VERSION_JSON_PATH, "w") as outfile:
                     json.dump(current_version_json, outfile)
 
-            print("\n\nUpdate done\nYou can find update log in https://github.com/powenn/AltServer-Linux-PyScript/releases\nScript requires restart to apply updates\nUse `e` option to exit the script\n\n")
+            logging.info("\n\nUpdate done\nYou can find update log in https://github.com/dreth/AltServer-Linux-PyScript/releases\nScript requires restart to apply updates\nUse `e` option to exit the script\n\n")
     else:
-        print("All resources and script are up to dated :)")
+        logging.info("All resources and script are up to dated :)")
 
 
 class AnisetteServer:
@@ -294,7 +295,7 @@ class AnisetteServer:
             f"{ANISETTE_SERVER_PATH} -n {host} -p {port}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
     def kill(self):
-        print(subprocess.getoutput("killall anisette-server"))
+        logging.info(subprocess.getoutput("killall anisette-server"))
 
 
 class AltServerDaemon:
@@ -306,7 +307,7 @@ class AltServerDaemon:
             ALTSERVER_PATH, shell=True)  # ,env=os.environ)
 
     def kill(self):
-        print(subprocess.getoutput("killall AltServer"))
+        logging.info(subprocess.getoutput("killall AltServer"))
 
     def restart(self):
         self.kill()
@@ -317,20 +318,20 @@ class Netmuxd:
     def __init__(self):
         if Netmuxd_is_on:
             if subprocess.getoutput("echo $(pidof usbmuxd)") != "":
-                print(subprocess.getoutput("sudo kill -9 $(pidof usbmuxd)"))
+                logging.info(subprocess.getoutput("sudo kill -9 $(pidof usbmuxd)"))
             self.start()
 
     def start(self):
         self.netmuxd = subprocess.Popen(f"sudo -b {NETMUXD_PATH}", shell=True)
 
     def kill(self):
-        print(subprocess.getoutput("sudo killall netmuxd"))
+        logging.info(subprocess.getoutput("sudo killall netmuxd"))
 
     def switchWiFi(self):
         global Netmuxd_is_on
         Netmuxd_is_on = True
         DebugPrint(f"NETMUXD : {Netmuxd_is_on}")
-        print(subprocess.getoutput("sudo kill -9 $(pidof usbmuxd)"))
+        logging.info(subprocess.getoutput("sudo kill -9 $(pidof usbmuxd)"))
         self.kill()
         self.start()
 
@@ -338,7 +339,7 @@ class Netmuxd:
         global Netmuxd_is_on
         Netmuxd_is_on = False
         DebugPrint(f"NETMUXD : {Netmuxd_is_on}")
-        print(subprocess.getoutput("sudo usbmuxd"))
+        logging.info(subprocess.getoutput("sudo usbmuxd"))
         self.kill()
 
 
@@ -372,7 +373,7 @@ class DeviceManager:
             '\n') if Netmuxd_is_on else subprocess.getoutput("idevice_id -l").split('\n')
         DebugPrint(udids)
         if udids == ['']:
-            print("No devices found")
+            logging.info("No devices found")
         else:
             for udid in udids:
                 name = subprocess.getoutput(
@@ -388,13 +389,13 @@ class InstallationManager:
 
     def selectDevice(self, devices: list[iDevice]):
         for i in range(len(devices)):
-            print(f"[{i}] : {devices[i].name} , {devices[i].UDID}")
+            logging.info(f"[{i}] : {devices[i].name} , {devices[i].UDID}")
         try:
             index = int(
                 getAnswer("Enter the index of the device for installation : "))
             self.selectedDevice = devices[index]
         except:
-            print("Invalid index")
+            logging.info("Invalid index")
             self.selectedDevice = None
 
     def getAccount(self):
@@ -414,7 +415,7 @@ class InstallationManager:
                 self.filePath = filePath
             else:
                 self.filePath = None
-                print("No file path entered")
+                logging.info("No file path entered")
         else:
             self.filePath = ALTSTORE_PATH
 
@@ -428,7 +429,7 @@ class InstallationManager:
 
 def main():
     if CheckNetworkConnection() == False:
-        print("Please connect to network and re-run the script")
+        logging.info("Please connect to network and re-run the script")
         input("Press enter to exit : ")
         exit(-1)
     CheckResource()
@@ -440,7 +441,7 @@ def main():
     altserverdaemon = AltServerDaemon()
     device_manager = DeviceManager()
     installaion_manager = InstallationManager()
-    print(HELP_MSG)
+    logging.info(HELP_MSG)
     while True:
         option = getAnswer("Enter OPTION to continue : ").lower()
 
@@ -465,7 +466,7 @@ def main():
                     netmuxd.switchWiFi()
                     altserverdaemon.restart()
             else:
-                print(f"Netmuxd is not support arch : {ARCH}")
+                logging.info(f"Netmuxd is not support arch : {ARCH}")
 
         elif option == 't':
             if Netmuxd_is_on:
@@ -480,18 +481,18 @@ def main():
             break
 
         elif option == 'h':
-            print(HELP_MSG)
+            logging.info(HELP_MSG)
 
         elif option == 'p':
             devices = device_manager.getDevices()
             for d in devices:
-                print(f"{d.name} , {d.UDID}")
+                logging.info(f"{d.name} , {d.UDID}")
 
         elif option == 'u':
             Update()
 
         else:
-            print("Invalid option")
+            logging.info("Invalid option")
 
 
 HELP_MSG = """
@@ -518,6 +519,9 @@ OPTIONS
         Update this script
         
 For more information: 
+https://github.com/dreth/AltServer-Linux-PyScript
+
+FORKED FROM:
 https://github.com/powenn/AltServer-Linux-PyScript
 
 """
